@@ -7,9 +7,9 @@ package eventorgrabber;
 
 import IofXml30.java.Event;
 import IofXml30.java.EventList;
-import IofXml30.java.Id;
 import IofXml30.java.Organisation;
-import IofXml30.java.OrganisationList;
+import EventorApi.OrganisationList;
+//import IofXml30.java.OrganisationList;
 import IofXml30.java.PersonList;
 import IofXml30.java.ResultList;
 import java.io.BufferedReader;
@@ -20,6 +20,8 @@ import java.io.StringReader;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -27,6 +29,8 @@ import javax.swing.JFrame;
 import javax.swing.JOptionPane;
 import javax.xml.bind.DataBindingException;
 import javax.xml.bind.JAXB;
+import javax.xml.bind.JAXBContext;
+import javax.xml.bind.Unmarshaller;
 
 /**
  *
@@ -45,7 +49,8 @@ public class EventorInterface {
     public static String oactStringId = "4";
     
     public static EventList getEventList(String fromDate, String toDate) {
-    String classificationIds = "1,2"; // 1=Championship, 2=National
+    
+        String classificationIds = "1,2"; // 1=Championship, 2=National
 
             String eventorQuery = "events?fromDate=" + fromDate + "&toDate=" + toDate + "&classificationIds=" + classificationIds;
             String iofXmlType = "EventList";
@@ -58,6 +63,32 @@ public class EventorInterface {
             EventList eventList = JAXB.unmarshal(new StringReader(xmlString), EventList.class);
             
             return eventList;
+    }
+    
+    public static EventorApi.EventList getEventList(String fromDate, String toDate, String organisationIdString){
+        /*
+        
+        GET https://eventor.orientering.se/api/events
+        Returnerar en lista med tävlingar som matchar sökparametrarna.
+        
+        fromDate 		0000-01-01              Startdatum (åååå-mm-dd).
+        toDate                  9999-12-31              Slutdatum (åååå-mm-dd).
+        fromModifyDate 		0000-01-01 00:00:00 	Inkluderar endast tävlingar som ändrats efter denna tidpunkt (åååå-mm-dd hh:mm:ss).
+        toModifyDate 		9999-12-31 23:59:59 	Inkluderar endast tävlingar som ändrats före denna tidpunkt (åååå-mm-dd hh:mm:ss).
+        eventIds                                        Kommaseparerad lista med tävlings-id:n. Utelämna för att inkludera alla tävlingar.
+        organisationIds                                 Kommaseparerad lista med organisations-id:n för arrangörsklubbarna. Om ett distrikts organisations-id anges kommer alla tävlingar som arrangeras av en klubb i distriktet att inkluderas. Utelämna för att inkludera alla tävlingar.
+        classificationIds                               Kommaseparerad lista med tävlingstyps-id:n, där 1=mästerskapstävling, 2=nationell tävling, 3=distriktstävling, 4=närtävling, 5=klubbtävling, 6=internationell tävling. Utelämna för att inkludera alla tävlingar.
+        includeEntryBreaks 		false           Sätt till true för att inkludera tävlingens anmälningsstopp.
+        includeAttributes 		false           Sätt till true för att inkludera tävlingens tävlingsattribut.
+        */
+        
+        String eventorQuery = "events?fromDate=" + fromDate + "&toDate=" + toDate + "&organisationIds=" + organisationIdString;        
+        String iofXmlType = "EventList";
+        String xmlString = EventorInterface.getEventorData(eventorQuery, "From Date " + fromDate + " To Date " + toDate);
+        
+        EventorApi.EventList eventList = JAXB.unmarshal(new StringReader(xmlString), EventorApi.EventList.class);
+        
+        return eventList;
     }
 
     public static String getEventorData(String eventorQuery, String description) {
@@ -230,8 +261,9 @@ OrganisationList
         String eventorQuery = "organisations";
         String description = "";
         
-        String xmlString = getEventorData(eventorQuery, description);
+        //String xmlString = getEventorData(eventorQuery, description);
           
+        String xmlString = new String(Files.readAllBytes(Paths.get("/home/shep/Desktop/organisations")));
         if (xmlString.equals("")){
             // Somethings gone wrong in the download
             // We've alread shown a message - just make sure whoever asked for this data knows we've had an exception...
@@ -241,6 +273,14 @@ OrganisationList
         try{        
             // Testing ONLY
             if (DEV) stringToFile(xmlString, description); // Dump downloaded XML to a file
+            
+            //JAXBContext context = JAXBContext.newInstance(EventorApi.OrganisationList.class);
+            //Unmarshaller unmarshaller = context.createUnmarshaller();
+            //unmarshaller.setEventHandler(new javax.xml.bind.helpers.DefaultValidationEventHandler());
+            
+            //StringReader reader = new StringReader(xmlString);
+            //OrganisationList orgList = (OrganisationList) unmarshaller.unmarshal(reader);
+
             
             // TODO this unmarshalling is failing
             OrganisationList organisationList = JAXB.unmarshal(new StringReader(xmlString), OrganisationList.class);        
@@ -294,11 +334,11 @@ Returned element
 PersonList
      */
      
-     public static PersonList downloadOrganisationMembers()  throws Exception{
+     public static EventorApi.PersonList downloadOrganisationMembers(String organisationIdString)  throws Exception{
         // https://eventor.orientering.se/api/organisations
         String description = "";
         
-        String eventorQuery = "persons/organisations/" + oactStringId + "?includeContactDetails=True"; // 12 is Bushflyers
+        String eventorQuery = "persons/organisations/" + organisationIdString + "?includeContactDetails=True"; // 12 is Bushflyers
         
         
         String xmlString = getEventorData(eventorQuery, description);
@@ -314,11 +354,11 @@ PersonList
             if (DEV) stringToFile(xmlString, description); // Dump downloaded XML to a file
             
             // TODO this unmarshalling is failing
-            PersonList personList = JAXB.unmarshal(new StringReader(xmlString), PersonList.class);        
+            EventorApi.PersonList personList = JAXB.unmarshal(new StringReader(xmlString), EventorApi.PersonList.class);        
             return personList;
         }
         catch (DataBindingException e){
-            return new PersonList();
+            return new EventorApi.PersonList();
         }  
     }   
      
