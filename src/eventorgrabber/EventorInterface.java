@@ -158,7 +158,8 @@ public class EventorInterface {
     }
     
     public static ResultList downloadResultListForEventRaceId(String eventId, String eventRaceId) throws Exception {
-                
+        
+        // Returns IOF XML Results
         String eventorQuery = "results/event/iofxml?eventId=" + eventId + "&eventRaceId=" + eventRaceId;
         String description = eventId + " : " + eventRaceId;
         String xmlString = getEventorData(eventorQuery, description);
@@ -178,6 +179,39 @@ public class EventorInterface {
         }
         catch (DataBindingException e){
             return new ResultList();
+        }
+    }
+    
+    public static EventorApi.ResultList downloadEventorResultListForEventRaceId(String eventId) throws IOException{
+        
+        /*        
+        GET https://eventor.orientering.se/api/results/event
+        
+        Returnerar resultat för en tävling.
+        eventId 			Tävlings-id enligt /events.
+        includeSplitTimes 			Sätt till true för att inkludera sträcktider.
+        top 			Returnerar endast detta antal deltagare från toppen av resultatlistan. Utelämna för att inkludera alla deltagare.
+        */
+        // Returns Eventor XML Results
+        String eventorQuery = "results/event?eventId=" + eventId;
+        String description = eventId;
+        String xmlString = getEventorData(eventorQuery, description);
+          
+        if (xmlString.equals("")){
+            // Somethings gone wrong in the download
+            // We've alread shown a message - just make sure whoever asked for this data knows we've had an exception...
+            throw new IOException();
+        }
+        
+        try{        
+            // Testing ONLY
+            if (DEV) stringToFile(xmlString, description); // Dump downloaded XML to a file
+            
+            EventorApi.ResultList thisResultList = JAXB.unmarshal(new StringReader(xmlString), EventorApi.ResultList.class);        
+            return thisResultList;
+        }
+        catch (DataBindingException e){
+            return new EventorApi.ResultList();
         }
     }
     
