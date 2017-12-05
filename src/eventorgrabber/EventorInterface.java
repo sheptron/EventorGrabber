@@ -8,8 +8,6 @@ package eventorgrabber;
 import IofXml30.java.Event;
 import IofXml30.java.EventList;
 import IofXml30.java.Organisation;
-import EventorApi.OrganisationList;
-//import IofXml30.java.OrganisationList;
 import IofXml30.java.PersonList;
 import IofXml30.java.ResultList;
 import java.io.BufferedReader;
@@ -20,8 +18,6 @@ import java.io.StringReader;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -29,8 +25,6 @@ import javax.swing.JFrame;
 import javax.swing.JOptionPane;
 import javax.xml.bind.DataBindingException;
 import javax.xml.bind.JAXB;
-import javax.xml.bind.JAXBContext;
-import javax.xml.bind.Unmarshaller;
 
 /**
  *
@@ -290,14 +284,13 @@ Returned element
 
 OrganisationList
      */
-     public static OrganisationList downloadOrganisations()  throws Exception{
+     public static EventorApi.OrganisationList downloadOrganisations()  throws Exception{
         // https://eventor.orientering.se/api/organisations
         String eventorQuery = "organisations";
         String description = "";
         
-        //String xmlString = getEventorData(eventorQuery, description);
-          
-        String xmlString = new String(Files.readAllBytes(Paths.get("/home/shep/Desktop/organisations")));
+        String xmlString = getEventorData(eventorQuery, description);  
+        //String xmlString = new String(Files.readAllBytes(Paths.get("/home/shep/Desktop/organisations")));
         if (xmlString.equals("")){
             // Somethings gone wrong in the download
             // We've alread shown a message - just make sure whoever asked for this data knows we've had an exception...
@@ -315,13 +308,11 @@ OrganisationList
             //StringReader reader = new StringReader(xmlString);
             //OrganisationList orgList = (OrganisationList) unmarshaller.unmarshal(reader);
 
-            
-            // TODO this unmarshalling is failing
-            OrganisationList organisationList = JAXB.unmarshal(new StringReader(xmlString), OrganisationList.class);        
+            EventorApi.OrganisationList organisationList = JAXB.unmarshal(new StringReader(xmlString), EventorApi.OrganisationList.class);        
             return organisationList;
         }
         catch (DataBindingException e){
-            return new OrganisationList();
+            return new EventorApi.OrganisationList();
         }  
     }    
      

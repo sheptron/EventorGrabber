@@ -12,16 +12,20 @@ import EventorApi.OrganisationList;
 import EventorApi.Person;
 import EventorApi.PersonList;
 import EventorApi.EventList;
+import java.io.File;
 import java.io.FileWriter;
 import java.util.ArrayList;
 //import IofXml30.java.OrganisationList;
 //import IofXml30.java.PersonList;
 import java.util.HashMap;
+import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JList;
 import javax.swing.JOptionPane;
 import javax.swing.JScrollPane;
 import javax.swing.ListSelectionModel;
+import javax.swing.filechooser.FileNameExtensionFilter;
+import orienteeringTools.InformationDialog;
 
 /**
  *
@@ -30,21 +34,30 @@ import javax.swing.ListSelectionModel;
 public class EventorGrabber {
     
     public static final String ORG_SELECTION_DIALOG_STRING = "Select the Organisation from the list below...";
+    public static final String STATE_ASSOCIATION_ORGANISATION_TYPE_ID = "2"; // State Associations are OrganisationTypeId = 2, clubs OrganisationTypeId = 3
 
     /**
      * @param args the command line arguments
      */
     public static void main(String[] args) {
         // TODO code application logic here
+        
+        String[] myStringArray = {"OK","Cancel"};
+        int goNoGo = InformationDialog.optionBox(myStringArray, "Click OK to start downloading statistics from Eventor...\nThis may take some time depending on your internet speed!", "Eventor Statistics Grabber Tool");
+        
+        if (goNoGo != 0){
+            // Get outta here
+            return;
+        }
+        
         try {                                
             // First get a list of organisations
-            OrganisationList organisationList = EventorInterface.downloadOrganisations();
+            EventorApi.OrganisationList organisationList = EventorInterface.downloadOrganisations();
             
             HashMap<String,String> organisationMap = new HashMap();
-            for (EventorApi.Organisation organisation : organisationList.getOrganisation()) {
-                // State Associations are OrganisationTypeId = 2, clubs OrganisationTypeId = 3
-                if (organisation.getOrganisationTypeId().getContent().equals("2"))
-                organisationMap.put(organisation.getMediaName().getContent(), organisation.getOrganisationId().getContent());
+            for (EventorApi.Organisation organisation : organisationList.getOrganisation()) {                
+                if (organisation.getOrganisationTypeId().getContent().equals(STATE_ASSOCIATION_ORGANISATION_TYPE_ID))
+                    organisationMap.put(organisation.getMediaName().getContent(), organisation.getOrganisationId().getContent());
             }            
             
             // Now offer the user to select one
@@ -67,8 +80,15 @@ public class EventorGrabber {
             
             // Now go through each person and grab their results
             // TODO get desired date range from user
-            String fromDate = "2017-10-01";
-            String toDate = "2017-10-31";
+            String fromDate = "2017-01-01";
+            String toDate = "2017-12-31";
+            
+            // TODO create the yearArray using this year
+            String[] yearArray = {"2017","2016","2015"};
+            String yearToGrab = InformationDialog.selectionBox(yearArray, 0, "Select year below...", "Select Year");
+            
+            fromDate = yearToGrab + "-01-01";
+            toDate = yearToGrab + "-12-31";
             
             // Get all of the events organised by selected organisation
             EventorApi.EventList eventList = EventorInterface.getEventList(fromDate, toDate, selectedOrganisationIdString);
@@ -98,7 +118,9 @@ public class EventorGrabber {
                 EventorApi.ResultList resultList = EventorInterface.downloadEventorResultListForEventRaceId(event.getEventId().getContent());
                 int numberOfParticipants = getNumberOfParticipants(resultList);
                 
-                ParticipationData participationData = new ParticipationData(eventId, eventName, numberOfParticipants);                
+                String dateString = event.getStartDate().getDate().getContent();
+                
+                ParticipationData participationData = new ParticipationData(eventId, dateString, eventName, numberOfParticipants);                
                 allParticipationData.add(participationData);
             }
             
@@ -107,10 +129,14 @@ public class EventorGrabber {
             //}
             
             progressBar.updateBar(100, "Done..." + "\n");
-            progressBar.updateBar(100, "You can close now this window." + "\n");
+            //progressBar.updateBar(100, "You can close now this window." + "\n");
             frame.dispose();
             
-            writeCsvFile("/home/shep/Desktop/testing.csv", allParticipationData);
+            File fileToSave = getSaveFileLocationFromUser();
+            
+            writeCsvFile(fileToSave, allParticipationData);
+            
+            InformationDialog.infoBox("Done! File saved: " + fileToSave.getAbsolutePath(), "Eventor Statistics Grabber Tool");
             
             
             int j = 1;
@@ -143,7 +169,38 @@ public class EventorGrabber {
         return numberOfParticipants;
     }
     
-    private static void writeCsvFile(String fileName, ArrayList<ParticipationData> participationDataList) {
+    private static File getSaveFileLocationFromUser() {
+
+        // Get Save Directory from User
+        //
+        // Get file directory from user...
+        JFileChooser fc = new JFileChooser();
+        fc.setFileSelectionMode(JFileChooser.FILES_ONLY);
+
+        fc.setMultiSelectionEnabled(false);
+        fc.setDialogTitle("Specify save location and file name (default will be your Downloads directory)");
+
+        fc.setFileFilter(new FileNameExtensionFilter("CSV Files", "csv"));
+
+        File folder;
+        File fileToSave = new File(ORG_SELECTION_DIALOG_STRING);
+        if (fc.showSaveDialog(null) == JFileChooser.APPROVE_OPTION) {
+            fileToSave = fc.getSelectedFile();
+        } 
+        else {
+            String home = System.getProperty("user.home");
+            fileToSave = new File(home + "/Downloads/EventorGrabber.csv"); 
+        }
+        
+        // Check we have a ".csv"
+        if (!fileToSave.getAbsolutePath().endsWith(".csv")){
+            // If not add .csv to the filename
+            fileToSave = new File(fileToSave.getAbsolutePath() + ".csv");
+        }
+        return fileToSave;
+    }
+    
+    private static void writeCsvFile(File fileName, ArrayList<ParticipationData> participationDataList) {
 
         // TODO get file save location from user        
         FileWriter fileWriter = null;
@@ -157,8 +214,7 @@ public class EventorGrabber {
             //Write each data object list to the CSV file
             for (ParticipationData participationData : participationDataList) {
                 fileWriter.append(participationData.toString());
-            }
-            System.out.println("CSV file was created successfully !!!");
+            }            
 
         } 
         catch (Exception e) {

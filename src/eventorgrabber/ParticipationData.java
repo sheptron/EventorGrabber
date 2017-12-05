@@ -11,17 +11,19 @@ package eventorgrabber;
  */
 public class ParticipationData {
     
-    public static String HEADER_DATA = "Event Id,Event Name,Competitor Count\n";
+    public static String HEADER_DATA = "Event Id,Date,Event Name,Competitor Count\n";
     
     public String eventId;
     public String eventName;
     public int competitorCount;
+    public String dateString;
     // Date
 
-    public ParticipationData(String eventId, String eventName, int competitorCount) {
+    public ParticipationData(String eventId, String dateString, String eventName, int competitorCount) {
         this.eventId = eventId;
         this.eventName = eventName;
         this.competitorCount = competitorCount;
+        this.dateString = dateString;
     }
 
     public String getEventId() {
@@ -47,12 +49,20 @@ public class ParticipationData {
     public void setCompetitorCount(int competitorCount) {
         this.competitorCount = competitorCount;
     }
+
+    public String getDateString() {
+        return dateString;
+    }
+
+    public void setDateString(String dateString) {
+        this.dateString = dateString;
+    }
     
     @Override
     public String toString(){
         // Use this for writing to CSV
         // eventname sometimes has a comma so put quotes around it
-        return eventId + "," + "\"" + eventName + "\"" + "," + Integer.toString(competitorCount) + "\n";
+        return eventId + "," + dateString + "," + "\"" + eventName + "\"" + "," + Integer.toString(competitorCount) + "\n";
     }
 
     public static String getHEADER_DATA() {
